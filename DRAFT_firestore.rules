@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Phase 0: Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function isVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    // Phase 4: Entity Validators
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+             data.keys().size() == 6 &&
+             data.uid == request.auth.uid &&
+             data.email == request.auth.token.email &&
+             data.role == 'citizen' &&
+             data.createdAt == request.time;
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['title', 'description', 'category', 'location', 'status', 'authorId', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() <= 2000 &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 100 &&
+             data.status in ['submitted', 'under_review', 'work_in_progress', 'resolved'] &&
+             data.authorId == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    // Collection matches
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) && isVerified() && isValidUser(incoming());
+      allow update: if isOwner(userId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt']) &&
+        incoming().updatedAt == request.time
+      ) || isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isVerified() && isValidId(reportId) && isValidReport(incoming());
+      allow update: if (
+        (isOwner(existing().authorId) && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'location', 'updatedAt']) &&
+         incoming().updatedAt == request.time &&
+         existing().status == 'submitted') // Can only edit if still submitted
+        ||
+        (isAdmin() && 
+         incoming().diff(existing()).affectedKeys().hasAll(['updatedAt']) &&
+         incoming().updatedAt == request.time)
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{adminUid} {
+      allow read: if isSignedIn();
+      allow write: if false; // Managed via console/backend
+    }
+  }
+}

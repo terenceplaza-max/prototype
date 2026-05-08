@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for citizens and administrators.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["citizen", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "A citizen feedback report or infrastructure issue.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "address": { "type": "string" },
+            "coordinates": {
+              "type": "object",
+              "properties": {
+                "lat": { "type": "number" },
+                "lng": { "type": "number" }
+              }
+            }
+          }
+        },
+        "status": { "type": "string", "enum": ["submitted", "under_review", "work_in_progress", "resolved"] },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "evidenceImage": { "type": "string" },
+        "timeline": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" },
+              "message": { "type": "string" },
+              "type": { "type": "string", "enum": ["status_update", "official_response"] },
+              "officialInfo": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "position": { "type": "string" },
+                  "avatar": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "officialResponse": {
+          "type": "object",
+          "properties": {
+            "message": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" },
+            "officialInfo": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "position": { "type": "string" },
+                "avatar": { "type": "string" }
+              }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "category", "location", "status", "authorId", "createdAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Registry of administrative user UIDs.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" }
+      },
+      "required": ["uid"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles for the platform."
+    },
+    "reports/{reportId}": {
+      "schema": "Report",
+      "description": "Publicly trackable citizen reports."
+    },
+    "admins/{adminUid}": {
+      "schema": "Admin",
+      "description": "Administrator roles registry."
+    }
+  }
+}

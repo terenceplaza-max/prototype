@@ -1,0 +1,14 @@
+{
+  "name": "Butuan City Citizen Portal",
+  "description": "An official platform for citizens of Butuan City to share feedback, track progress on civic reports, and engage with the local government.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "Feedback reporting",
+    "Real-time status tracking",
+    "Official government responses",
+    "Citizen dashboard"
+  ]
+}
